@@ -716,6 +716,8 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   #x: fixed effect intercept
   #y: observed outcome
   
+  require(HDInterval)
+  
   posterior_samples <- posterior[[1]]
   posterior_sample3 <- posterior[[2]]
   posterior_sample2 <- posterior[[3]]
@@ -727,29 +729,29 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   atemean1 <- mean(posterior_sample1[[1]][,(substr(colnames(posterior_sample1[[1]]),1,3) == "eta")])
   atemedian1 <- median(posterior_sample1[[1]][,(substr(colnames(posterior_sample1[[1]]),1,3) == "eta")])
   #credible interval
-  atelq1 <- summary(posterior_sample1[[1]])$quantiles[(substr(rownames(summary(posterior_sample1[[1]])$quantiles),1,3) == "eta"),][1]
-  ateuq1 <- summary(posterior_sample1[[1]])$quantiles[(substr(rownames(summary(posterior_sample1[[1]])$quantiles),1,3) == "eta"),][5]
+  atelq1 <- round(hdi(posterior_sample1[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample1[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
+  ateuq1 <- round(hdi(posterior_sample1[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample1[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
   
   #ATE estimates by model 2
   atemean2 <- mean(posterior_sample2[[1]][,(substr(colnames(posterior_sample2[[1]]),1,3) == "eta")])
   atemedian2 <- median(posterior_sample2[[1]][,(substr(colnames(posterior_sample2[[1]]),1,3) == "eta")])
   #credible interval
-  atelq2 <- summary(posterior_sample2[[1]])$quantiles[(substr(rownames(summary(posterior_sample2[[1]])$quantiles),1,3) == "eta"),][1]
-  ateuq2 <- summary(posterior_sample2[[1]])$quantiles[(substr(rownames(summary(posterior_sample2[[1]])$quantiles),1,3) == "eta"),][5]
+  atelq2 <- round(hdi(posterior_sample2[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample2[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
+  ateuq2 <- round(hdi(posterior_sample2[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample2[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
   
   #ATE estimates by model 3
   atemean3 <- mean(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,3) == "eta")])
   atemedian3 <- atemedian2 <- median(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,3) == "eta")])
   #credible interval
-  atelq3 <- summary(posterior_sample3[[1]])$quantiles[(substr(rownames(summary(posterior_sample3[[1]])$quantiles),1,3) == "eta"),][1]
-  ateuq3 <- summary(posterior_sample3[[1]])$quantiles[(substr(rownames(summary(posterior_sample3[[1]])$quantiles),1,3) == "eta"),][5]
+  atelq3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
+  ateuq3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
   
   #ATE estimates by model 4
   atemean4 <- mean(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,3) == "eta")])
   atemedian4 <- median(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,3) == "eta")])
   #credible interval
-  atelq4 <- summary(posterior_samples[[1]])$quantiles[(substr(rownames(summary(posterior_samples[[1]])$quantiles),1,3) == "eta"),][1]
-  ateuq4 <- summary(posterior_samples[[1]])$quantiles[(substr(rownames(summary(posterior_samples[[1]])$quantiles),1,3) == "eta"),][5]
+  atelq4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
+  ateuq4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
   
   
   #coefficients of model 1
@@ -768,17 +770,17 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   coefmean3 <- round(colMeans(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,5) == "gamma")]),2)
   coefmedian3 <- round(apply(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,5) == "gamma")],2,median),2)
   #credible interval
-  coefci3 <- round(summary(posterior_sample3[[1]])$quantiles[(substr(rownames(summary(posterior_sample3[[1]])$quantiles),1,5) == "gamma"),],2)
-  coeflq3 <- coefci3[,1]
-  coefuq3 <- coefci3[,5]
+  coefci3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,5) == "gamma")],2)
+  coeflq3 <- coefci3[1,]
+  coefuq3 <- coefci3[2,]
   
   #coefficients of model 4
   coefmean4 <- round(colMeans(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,5) == "gamma")]),2)
   coefmedian4 <- round(apply(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,5) == "gamma")],2,median),2)
   #credible interval
-  coefci4 <- round(summary(posterior_samples[[1]])$quantiles[(substr(rownames(summary(posterior_samples[[1]])$quantiles),1,5) == "gamma"),],2)
-  coeflq4 <- coefci4[,1]
-  coefuq4 <- coefci4[,5]
+  coefci4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,5) == "gamma")],2)
+  coeflq4 <- coefci4[1,]
+  coefuq4 <- coefci4[2,]
   
   r4 <- c(atemean4,atemedian4,atelq4,ateuq4,coefmean4,coefmedian4,coeflq4,coefuq4,WAIC[1])
   r3 <- c(atemean3,atemedian3,atelq3,ateuq3,coefmean3,coefmedian3,coeflq3,coefuq3,WAIC[2])
