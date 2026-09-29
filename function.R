@@ -158,7 +158,7 @@ model{
                                    'v' = v,
                                    'n_col_v' = ncol(v)),
                          n.chains = 3,
-                         inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed))  #Number of Chains  
+                         inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
   
   ##############################################################
   #Posterior Sampling
@@ -351,7 +351,7 @@ model{
                                     'v' = v,
                                     'n_col_v' = ncol(v)),
                           n.chains = 3,
-                          inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed))  #Number of Chains  
+                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
   ##############################################################
   #Posterior Sampling Variable ICC
   ##############################################################
@@ -381,7 +381,7 @@ model{
                                     'y' = y,
                                     'z' = z),
                           n.chains = 3,
-                          inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed))  #Number of Chains  
+                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
   
   ##############################################################
   #Posterior Sampling Variable ICC
@@ -413,7 +413,7 @@ model{
                                     'y' = y,
                                     'z' = z),
                           n.chains = 3,
-                          inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed))  #Number of Chains  
+                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
   
   ############################################################
   #Posterior Sampling traditional
@@ -446,16 +446,16 @@ WAIC_Cal <- function(posterior,n_c,n,z,v,x,y){
   #y: observed outcome
   
   posterior_samples <- posterior[[1]]
-  posterior_sample3 <- posterior[[2]]
-  posterior_sample2 <- posterior[[3]]
-  posterior_sample1 <- posterior[[4]]
+  posterior_sample3 <- list(as.matrix(posterior[[2]]))  # Pool all retained chains for WAIC
+  posterior_sample2 <- list(as.matrix(posterior[[3]]))  # Pool all retained chains for WAIC
+  posterior_sample1 <- list(as.matrix(posterior[[4]]))  # Pool all retained chains for WAIC
   
   if(sum((substr(colnames(posterior_samples[[1]]),1,4) == "beta")) > 1){
     
     beta<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,4) == "beta")]
     for(j in 2:length(posterior_samples)){
       beta<-rbind(beta,
-                  posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,4) == "beta")])
+                  posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,4) == "beta")])
     }
     
   }
@@ -465,7 +465,7 @@ WAIC_Cal <- function(posterior,n_c,n,z,v,x,y){
     beta<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,4) == "beta")]
     for(j in 2:length(posterior_samples)){
       beta<-c(beta,
-              posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,4) == "beta")])
+              posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,4) == "beta")])
     }
     beta<-matrix(beta,
                  ncol = 1)
@@ -475,25 +475,25 @@ WAIC_Cal <- function(posterior,n_c,n,z,v,x,y){
   eta<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,3) == "eta")]
   for(j in 2:length(posterior_samples)){
     eta<-c(eta,
-           posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,3) == "eta")])
+           posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,3) == "eta")])
   }
   
   theta<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,5) == "theta")]
   for(j in 2:length(posterior_samples)){
     theta<-rbind(theta,
-                 posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,5) == "theta")])
+                 posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,5) == "theta")])
   }
   
   tau2<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,4) == "tau2")]
   for(j in 2:length(posterior_samples)){
     tau2<-rbind(tau2,
-                posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,4) == "tau2")])
+                posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,4) == "tau2")])
   }
   
   sigma2<-posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,6) == "sigma2")]
   for(j in 2:length(posterior_samples)){
     sigma2<-rbind(sigma2,
-                  posterior_samples[[2]][,(substr(colnames(posterior_samples[[2]]),1,6) == "sigma2")])
+                  posterior_samples[[j]][,(substr(colnames(posterior_samples[[j]]),1,6) == "sigma2")])
   }
   
   #####################################################################################################
@@ -705,6 +705,12 @@ WAIC_Cal <- function(posterior,n_c,n,z,v,x,y){
   
   return(c(WAIC_2,WAIC32,WAIC22,WAIC12))
 }
+# Pool the table parameters across chains; retain original chain objects for diagnostics.
+# Intervals below are pooled 95% HPD intervals, matching the published Table 4.
+pool_summary_draws <- function(chains){
+  keep <- grepl("^(beta|eta|gamma)", colnames(chains[[1]]))
+  coda::as.mcmc(do.call(rbind, lapply(chains, function(chain) as.matrix(chain)[, keep, drop = FALSE])))
+}
 #function calculating means, medians and credible intervals for the intervention effect and regression coefficients
 summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   #Input:
@@ -716,12 +722,10 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   #x: fixed effect intercept
   #y: observed outcome
   
-  require(HDInterval)
-  
-  posterior_samples <- posterior[[1]]
-  posterior_sample3 <- posterior[[2]]
-  posterior_sample2 <- posterior[[3]]
-  posterior_sample1 <- posterior[[4]]
+  posterior_samples <- list(pool_summary_draws(posterior[[1]]))
+  posterior_sample3 <- list(pool_summary_draws(posterior[[2]]))
+  posterior_sample2 <- list(pool_summary_draws(posterior[[3]]))
+  posterior_sample1 <- list(pool_summary_draws(posterior[[4]]))
   
   WAIC <- WAIC_Cal(posterior,n_c,n,z,v,x,y)
   
@@ -729,29 +733,29 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   atemean1 <- mean(posterior_sample1[[1]][,(substr(colnames(posterior_sample1[[1]]),1,3) == "eta")])
   atemedian1 <- median(posterior_sample1[[1]][,(substr(colnames(posterior_sample1[[1]]),1,3) == "eta")])
   #credible interval
-  atelq1 <- round(hdi(posterior_sample1[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample1[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
-  ateuq1 <- round(hdi(posterior_sample1[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample1[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
+  atelq1 <- coda::HPDinterval(posterior_sample1[[1]], prob = 0.95)["eta", "lower"]
+  ateuq1 <- coda::HPDinterval(posterior_sample1[[1]], prob = 0.95)["eta", "upper"]
   
   #ATE estimates by model 2
   atemean2 <- mean(posterior_sample2[[1]][,(substr(colnames(posterior_sample2[[1]]),1,3) == "eta")])
   atemedian2 <- median(posterior_sample2[[1]][,(substr(colnames(posterior_sample2[[1]]),1,3) == "eta")])
   #credible interval
-  atelq2 <- round(hdi(posterior_sample2[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample2[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
-  ateuq2 <- round(hdi(posterior_sample2[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample2[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
+  atelq2 <- coda::HPDinterval(posterior_sample2[[1]], prob = 0.95)["eta", "lower"]
+  ateuq2 <- coda::HPDinterval(posterior_sample2[[1]], prob = 0.95)["eta", "upper"]
   
   #ATE estimates by model 3
   atemean3 <- mean(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,3) == "eta")])
-  atemedian3 <- atemedian2 <- median(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,3) == "eta")])
+  atemedian3 <- median(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,3) == "eta")])
   #credible interval
-  atelq3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
-  ateuq3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
+  atelq3 <- coda::HPDinterval(posterior_sample3[[1]], prob = 0.95)["eta", "lower"]
+  ateuq3 <- coda::HPDinterval(posterior_sample3[[1]], prob = 0.95)["eta", "upper"]
   
   #ATE estimates by model 4
   atemean4 <- mean(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,3) == "eta")])
   atemedian4 <- median(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,3) == "eta")])
   #credible interval
-  atelq4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,3) == "eta")],2)[1]
-  ateuq4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,3) == "eta")],2)[2]
+  atelq4 <- coda::HPDinterval(posterior_samples[[1]], prob = 0.95)["eta", "lower"]
+  ateuq4 <- coda::HPDinterval(posterior_samples[[1]], prob = 0.95)["eta", "upper"]
   
   
   #coefficients of model 1
@@ -770,17 +774,17 @@ summary_statistics <- function(posterior,n_c,n,z,v,x,y){
   coefmean3 <- round(colMeans(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,5) == "gamma")]),2)
   coefmedian3 <- round(apply(posterior_sample3[[1]][,(substr(colnames(posterior_sample3[[1]]),1,5) == "gamma")],2,median),2)
   #credible interval
-  coefci3 <- round(hdi(posterior_sample3[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_sample3[[1]], credMass = 0.95)),1,5) == "gamma")],2)
-  coeflq3 <- coefci3[1,]
-  coefuq3 <- coefci3[2,]
+  coefci3 <- round(coda::HPDinterval(posterior_sample3[[1]], prob = 0.95)[grepl("^gamma", colnames(posterior_sample3[[1]])), , drop = FALSE], 2)
+  coeflq3 <- coefci3[,1]
+  coefuq3 <- coefci3[,2]
   
   #coefficients of model 4
   coefmean4 <- round(colMeans(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,5) == "gamma")]),2)
   coefmedian4 <- round(apply(posterior_samples[[1]][,(substr(colnames(posterior_samples[[1]]),1,5) == "gamma")],2,median),2)
   #credible interval
-  coefci4 <- round(hdi(posterior_samples[[1]], credMass = 0.95)[,(substr(colnames(hdi(posterior_samples[[1]], credMass = 0.95)),1,5) == "gamma")],2)
-  coeflq4 <- coefci4[1,]
-  coefuq4 <- coefci4[2,]
+  coefci4 <- round(coda::HPDinterval(posterior_samples[[1]], prob = 0.95)[grepl("^gamma", colnames(posterior_samples[[1]])), , drop = FALSE], 2)
+  coeflq4 <- coefci4[,1]
+  coefuq4 <- coefci4[,2]
   
   r4 <- c(atemean4,atemedian4,atelq4,ateuq4,coefmean4,coefmedian4,coeflq4,coefuq4,WAIC[1])
   r3 <- c(atemean3,atemedian3,atelq3,ateuq3,coefmean3,coefmedian3,coeflq3,coefuq3,WAIC[2])
