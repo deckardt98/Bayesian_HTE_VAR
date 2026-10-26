@@ -62,7 +62,7 @@ cleandataset <- function(kdpp1){
   return(list(n_c,n,z,v,x,y))
 }
 #function producing posterior samples using 4 proposed models
-model_mcmc <- function(n_c,n,z,v,x,y,seed=75425,niter,burnin,thin){
+model_mcmc <- function(n_c,n,z,v,x,y,niter,burnin,thin){
   #Input:
   #n_c: number of clusters
   #n: subject id
@@ -70,7 +70,6 @@ model_mcmc <- function(n_c,n,z,v,x,y,seed=75425,niter,burnin,thin){
   #v: vector of covariates
   #x: fixed effect intercept
   #y: observed outcome
-  #seed: seeds for reproducibility
   #niter: total number of iterations
   #burnin: number of burn-in period
   #thin: thinning parameter
@@ -157,8 +156,7 @@ model{
                                    'z' = z,
                                    'v' = v,
                                    'n_col_v' = ncol(v)),
-                         n.chains = 3,
-                         inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
+                         n.chains = 3)  #Number of Chains
   
   ##############################################################
   #Posterior Sampling
@@ -177,8 +175,7 @@ model{
                                                    "omega_diff",
                                                    "delta"),
                                   thin = thin,        #Thinning
-                                  n.iter = niter,
-                                  seed=seed)  #Samples
+                                  n.iter = niter)  #Samples
   
   ###############################################################
   model_string1<-"
@@ -350,8 +347,7 @@ model{
                                     'z' = z,
                                     'v' = v,
                                     'n_col_v' = ncol(v)),
-                          n.chains = 3,
-                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
+                          n.chains = 3)  #Number of Chains
   ##############################################################
   #Posterior Sampling Variable ICC
   ##############################################################
@@ -380,8 +376,7 @@ model{
                                     'n' = n,
                                     'y' = y,
                                     'z' = z),
-                          n.chains = 3,
-                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
+                          n.chains = 3)  #Number of Chains
   
   ##############################################################
   #Posterior Sampling Variable ICC
@@ -412,8 +407,7 @@ model{
                                     'n' = n,
                                     'y' = y,
                                     'z' = z),
-                          n.chains = 3,
-                          inits = function(chain) list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = seed + chain - 1L))  #Number of Chains  
+                          n.chains = 3)  #Number of Chains
   
   ############################################################
   #Posterior Sampling traditional

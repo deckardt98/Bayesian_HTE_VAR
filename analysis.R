@@ -11,7 +11,7 @@ y <- clearned_kdpp[[6]]
 burnin <- 30000
 niter <- 300000
 thin <- 1
-posterior <- model_mcmc(n_c,n,z,v,x,y,seed=75425,niter,burnin,thin)
+posterior <- model_mcmc(n_c,n,z,v,x,y,niter,burnin,thin)
 result <- summary_statistics(posterior,n_c,n,z,v,x,y)
 result <- as.data.frame(result)
 write.csv(result,file="table4.csv")
